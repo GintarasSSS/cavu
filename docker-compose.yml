@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  php:
+    build:
+      context: .
+      dockerfile: ./php-local.dockerfile
+    ports:
+      - 80:80
+    restart: always
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: cavu
+      DB_USERNAME: root
+      DB_PASSWORD: password
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - db
+    networks:
+      - internal
+    user: "1000:1000"
+  db:
+    image: mysql:8.1
+    restart: always
+    environment:
+      MYSQL_DATABASE: cavu
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - 3309:3306
+    volumes:
+      - cavu-db:/var/lib/mysql
+    networks:
+      - internal
+
+volumes:
+  cavu-db:
+
+networks:
+  internal:
+    driver: bridge
