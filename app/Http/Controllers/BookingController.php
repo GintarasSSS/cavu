@@ -46,27 +46,27 @@ class BookingController extends Controller
     public function store(BookingRequest $request): JsonResponse
     {
 
-        return $this->executeBooking('createBooking',  __FUNCTION__, $request);
+        return $this->executeBooking('createBooking', Response::HTTP_CREATED, __FUNCTION__, $request);
     }
 
     public function update(BookingRequest $request): JsonResponse
     {
-        return $this->executeBooking('updateBooking',  __FUNCTION__, $request);
+        return $this->executeBooking('updateBooking', Response::HTTP_OK, __FUNCTION__, $request);
     }
 
     public function destroy(): JsonResponse
     {
-        return $this->executeBooking('deleteBooking', __FUNCTION__);
+        return $this->executeBooking('deleteBooking', Response::HTTP_OK, __FUNCTION__);
     }
 
-    private function executeBooking($callback, $functionName, $request = null): JsonResponse
+    private function executeBooking($callback, $response, $functionName, $request = null): JsonResponse
     {
         try {
             $this->repository->$callback($request);
 
             return response()->json(
                 ['status' => 'success'],
-                Response::HTTP_CREATED
+                $response
             );
         } catch (BadRequestException $e) {
             return response()->json(
