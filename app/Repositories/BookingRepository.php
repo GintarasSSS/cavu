@@ -91,7 +91,7 @@ class BookingRepository implements BookingRepositoryInterface
         })->with(['place'])->get()->first();
     }
 
-    private function getPlace(Request $request): array
+    public function getPlace(Request $request): array
     {
         $place = $this->place::with(['bookings' => function ($q) use ($request) {
             $q->whereNotBetween('start_at', [$request->start_at, $request->end_at])
