@@ -12,14 +12,27 @@ use Symfony\Component\HttpFoundation\Exception\BadRequestException;
 
 class BookingRepository implements BookingRepositoryInterface
 {
+    private Carbon $carbon;
+    private Price $price;
+    private Place $place;
+    private Booking $booking;
+
+    public function __construct(Carbon $carbon, Price $price, Place $place, Booking $booking)
+    {
+        $this->carbon = $carbon;
+        $this->price = $price;
+        $this->place = $place;
+        $this->booking = $booking;
+    }
+
     public function getAvailability(Request $request): array
     {
-        $startDate = Carbon::parse($request->start_at);
-        $endDate = Carbon::parse($request->end_at);
+        $startDate = $this->carbon::parse($request->start_at);
+        $endDate = $this->carbon::parse($request->end_at);
 
         $model = null;
 
-        $prices = Price::all();
+        $prices = $this->price::all();
 
         while ($startDate->lte($endDate)) {
             $date = $startDate->toDateString();
@@ -35,8 +48,8 @@ class BookingRepository implements BookingRepositoryInterface
                 }
 
                 if ($price->start_at && $price->end_at) {
-                    $priceStart = Carbon::parse($price->start_at);
-                    $priceEnd = Carbon::parse($price->end_at);
+                    $priceStart = $this->carbon::parse($price->start_at);
+                    $priceEnd = $this->carbon::parse($price->end_at);
 
                     if ($startDate->gte($priceStart) && $startDate->lte($priceEnd)) {
                         $datePrice += $price->price;
@@ -46,12 +59,12 @@ class BookingRepository implements BookingRepositoryInterface
 
             $datePrice /= 100;
 
-            $query = Place::query()
+            $query = $this->place::query()
                 ->selectRaw("? as date", [$date])
                 ->selectRaw('COUNT(places.id) as available')
                 ->selectRaw('? as price', [$datePrice])
                 ->whereNotIn('id',
-                    Booking::query()
+                    $this->booking::query()
                         ->select('place_id')
                         ->whereDate('start_at', '<=', $date)
                         ->whereDate('end_at', '>=', $date)
@@ -71,16 +84,16 @@ class BookingRepository implements BookingRepositoryInterface
 
     public function getBooking()
     {
-        $currentDate = Carbon::now()->toDateString();
+        $currentDate = $this->carbon::now()->toDateString();
 
-        return Booking::where('user_id', auth()->user()->id)->where(function ($q) use ($currentDate) {
+        return $this->booking::where('user_id', auth()->user()->id)->where(function ($q) use ($currentDate) {
             $q->where('start_at', '>', $currentDate)->orWhere('end_at', '>', $currentDate);
         })->with(['place'])->get()->first();
     }
 
     private function getPlace(Request $request): array
     {
-        $place = Place::with(['bookings' => function ($q) use ($request) {
+        $place = $this->place::with(['bookings' => function ($q) use ($request) {
             $q->whereNotBetween('start_at', [$request->start_at, $request->end_at])
                 ->whereNotBetween('end_at', [$request->start_at, $request->end_at]);
         }])->get()->first();
@@ -98,7 +111,7 @@ class BookingRepository implements BookingRepositoryInterface
             throw new BadRequestException('There are not available places for selected days.');
         }
 
-        Booking::create([
+        $this->booking::create([
             'user_id' => auth()->user()->id,
             'place_id' => $place['id'],
             'start_at' => $request->start_at,
